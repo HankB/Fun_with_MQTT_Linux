@@ -86,7 +86,10 @@ int main(int argc, char *argv[])
 		size_t i = 0;
 		while (PAYLOADS[i])
 		{
-			publish_msg(address, "my_topic", PAYLOADS[i++]);
+			if(publish_msg(address, "my_topic", PAYLOADS[i++]))
+			{
+				cout << "unable to publish" << endl;
+			}
 			sleep(1);
 		}
 	}
