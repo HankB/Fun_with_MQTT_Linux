@@ -20,7 +20,6 @@ namespace
 
 	const string DFLT_SERVER_ADDRESS{"tcp://localhost:1883"};
 	const string CLIENT_ID{"paho_cpp_async_publish"};
-	const string TOPIC{"test"};
 	const int QOS = 0;
 
 	const char *PAYLOADS[] = {
@@ -31,9 +30,43 @@ namespace
 
 }
 
+int publish_msg(const string &serverURI, const string &topic, const string &payload)
+{
+	cout << "Initializing for server '" << serverURI << "'..." << endl;
+	mqtt::async_client cli(serverURI, "");
+	cout << "  ...OK1" << endl;
+
+	try
+	{
+		cout << "\nConnecting..." << endl;
+		cli.connect()->wait();
+		cout << "  ...OK2" << endl;
+
+		cout << "\nPublishing messages..." << endl;
+
+		mqtt::topic top(cli, topic, QOS);
+		mqtt::token_ptr tok;
+
+		tok = top.publish(payload);
+		tok->wait(); // Just wait for the last one to complete.
+		cout << "OK" << endl;
+
+		// Disconnect
+		cout << "\nDisconnecting..." << endl;
+		cli.disconnect()->wait();
+		cout << "  ...OK3" << endl;
+	}
+	catch (const mqtt::exception &exc)
+	{
+		cerr << exc << endl;
+		return 1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	cout << "hello world" << endl;
 	// A client that just publishes normally doesn't need a persistent
 	// session or Client ID unless it's using persistence, then the local
 	// library requires an ID to identify the persistence files.
@@ -42,37 +75,11 @@ int main(int argc, char *argv[])
 	string address = (argc > 1) ? string(argv[1]) : DFLT_SERVER_ADDRESS,
 		   clientID = (argc > 2) ? string(argv[2]) : CLIENT_ID;
 
-	cout << "Initializing for server '" << address << "'..." << endl;
-    mqtt::async_client client(address, "");
-
-	try
+	size_t i = 0;
+	while (PAYLOADS[i])
 	{
-		cout << "\nConnecting..." << endl;
-		client.connect()->wait();
-		cout << "  ...OK" << endl;
-
-		cout << "\nPublishing messages..." << endl;
-
-		mqtt::topic top(client, "Cpp_test", QOS);
-		mqtt::token_ptr tok;
-
-		size_t i = 0;
-		while (PAYLOADS[i])
-		{
-			tok = top.publish(PAYLOADS[i++]);
-		}
-		tok->wait(); // Just wait for the last one to complete.
-		cout << "OK" << endl;
-
-		// Disconnect
-		cout << "\nDisconnecting..." << endl;
-		client.disconnect()->wait();
-		cout << "  ...OK" << endl;
+		publish_msg(address, "my_topic", PAYLOADS[i++]);
 	}
-	catch (const mqtt::exception &exc)
-	{
-		cerr << exc << endl;
-		return 1;
-	}
+
 	return 0;
 }
